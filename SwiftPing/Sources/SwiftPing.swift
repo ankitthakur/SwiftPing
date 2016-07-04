@@ -8,7 +8,6 @@
 
 import Foundation
 import Darwin
-import UIKit
 
 func getIPv4AddressFromHost(host:String, error:AutoreleasingUnsafeMutablePointer<NSError?>) -> Data?{
 
@@ -72,9 +71,6 @@ public class SwiftPing: NSObject {
 	private var timeoutBlock:((Void) -> Void)?
 
 	private var currentQueue:DispatchQueue?
-
-
-	var button:UIButton?
 
 	func socketCallback(socket: CFSocket!, type:CFSocketCallBackType, address:CFData!, data:UnsafePointer<Void>, info:UnsafeMutablePointer<Void>) {
 		// Conditional cast from 'SwiftPing' to 'SwiftPing' always succeeds
