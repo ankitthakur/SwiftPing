@@ -6,3 +6,6 @@ Thanks to https://github.com/OliverLetterer/SPLPing. Migrated it to Swift 3 and 
 
 
 Enhancement: Now pinging is supportable in any of the GCD Queue, where user wants.
+
+#Todo
+Test cases and usage needs to be added
