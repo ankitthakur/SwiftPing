@@ -88,10 +88,6 @@ public class SwiftPing: NSObject {
 				return
 		}
 
-		//		guard let ping:SwiftPing = unsafeBitCast(info, to: SwiftPing.self) else{
-		//			print("ping callback object is nil")
-		//			return
-		//		}
 		if (type as CFSocketCallBackType) == CFSocketCallBackType.dataCallBack {
 
 			let fData = UnsafePointer<UInt8>(data)
@@ -132,8 +128,16 @@ public class SwiftPing: NSObject {
 				completion(response: response);
 			}
 			else {
+				let ping:SwiftPing = ping!
+
 				// add observer to stop the ping, if already recieved once.
 				// start the ping.
+				ping.observer = {(ping:SwiftPing, response:PingResponse) -> Void in
+					ping.stop()
+					ping.observer = nil
+					completion(response: response);
+				}
+				ping.start()
 
 			}
 		}
@@ -206,7 +210,7 @@ public class SwiftPing: NSObject {
 			isPinging = true
 			currentSequenceNumber = 0
 			currentStartDate = nil
-			//			_senfPing()
+			sendPing()
 		}
 	}
 
@@ -215,9 +219,9 @@ public class SwiftPing: NSObject {
 		currentSequenceNumber = 0
 		currentStartDate = nil
 
-		//		if timeoutBlock {
-		//			DispatchQueue
-		//		}
+		if timeoutBlock != nil {
+			timeoutBlock = nil
+		}
 
 	}
 
@@ -229,10 +233,9 @@ public class SwiftPing: NSObject {
 		}
 
 		hasScheduledNextPing = true
-		//	if (self.timeoutBlock) {
-		//	dispatch_block_cancel(self.timeoutBlock);
-		//	self.timeoutBlock = nil;
-		//	}
+		if (self.timeoutBlock != nil) {
+			self.timeoutBlock = nil;
+		}
 
 		let dispatchTime: DispatchTime = DispatchTime.now() + Double(Int64((self.configuration?.pingInterval)! * Double(NSEC_PER_SEC)))
 
@@ -264,7 +267,6 @@ public class SwiftPing: NSObject {
 					return nil
 			}
 
-			//			let ipHeader:IPHeader = ipHeaderData?.bytes
 			let sourceAddr:[UInt8] = ipHeader.sourceAddress
 
 			return "\(sourceAddr[0]).\(sourceAddr[1]).\(sourceAddr[2]).\(sourceAddr[3])"
@@ -321,8 +323,6 @@ public class SwiftPing: NSObject {
 			return self.scheduleNextPing()
 
 		}
-
-		//		self.timeoutBlock = DispatchWorkItem
 
 		let sequenceNumber:UInt64 = self.currentSequenceNumber;
 		self.timeoutBlock = { () -> Void in
