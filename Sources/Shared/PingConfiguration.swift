@@ -14,16 +14,16 @@ public class PingConfiguration: NSObject {
 	var timeOutInterval:TimeInterval = 5 // default timeout interval is 5 secs.
 	var payloadSize:UInt64 = 64 // default payload size is 64 bytes.
 
-	init(interval:TimeInterval) {
+	public init(interval:TimeInterval) {
 		pingInterval = interval
 	}
 
-	init(pInterval:TimeInterval, withTimeout tInterval:TimeInterval) {
+	public init(pInterval:TimeInterval, withTimeout tInterval:TimeInterval) {
 		pingInterval = pInterval
 		timeOutInterval = tInterval
 	}
 
-	init(pInterval:TimeInterval, withTimeout tInterval:TimeInterval, withPayloadSize size:UInt64) {
+	public init(pInterval:TimeInterval, withTimeout tInterval:TimeInterval, withPayloadSize size:UInt64) {
 		pingInterval = pInterval
 		timeOutInterval = tInterval
 		payloadSize = size

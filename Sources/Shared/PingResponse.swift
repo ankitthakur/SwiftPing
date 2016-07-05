@@ -8,7 +8,7 @@
 
 import Foundation
 
-class PingResponse: NSObject {
+public class PingResponse: NSObject {
 
 	var identifier:UInt32
 	var ipAddress:String?

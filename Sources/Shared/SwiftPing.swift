@@ -72,29 +72,8 @@ public class SwiftPing: NSObject {
 
 	private var currentQueue:DispatchQueue?
 
-	func socketCallback(socket: CFSocket!, type:CFSocketCallBackType, address:CFData!, data:UnsafePointer<Void>, info:UnsafeMutablePointer<Void>) {
-		// Conditional cast from 'SwiftPing' to 'SwiftPing' always succeeds
-
-		// 1
-		var info:UnsafeMutablePointer<Void> = info
-		guard let ping:SwiftPing = (withUnsafePointer(&info) { (temp) in
-			return unsafeBitCast(temp, to: SwiftPing.self)
-			})else{
-				print("ping callback object is nil")
-				return
-		}
-
-		if (type as CFSocketCallBackType) == CFSocketCallBackType.dataCallBack {
-
-			let fData = UnsafePointer<UInt8>(data)
-			let bytes = UnsafeBufferPointer<UInt8>(start: fData, count: sizeof(UInt8))
-			let cfdata:Data = Data(buffer: bytes)
-			ping.socket(socket: socket, didReadData: cfdata)
-		}
-	}
-
-
-	class func ping(host:String, configuration:PingConfiguration, queue:DispatchQueue, completion:(ping:SwiftPing?, error:NSError?) -> Void) -> Void{
+	// MARK: Public APIs
+	public class func ping(host:String, configuration:PingConfiguration, queue:DispatchQueue, completion:(ping:SwiftPing?, error:NSError?) -> Void) -> Void{
 
 		DispatchQueue.global(attributes: .qosDefault).async {
 			var error:NSError?;
@@ -113,7 +92,7 @@ public class SwiftPing: NSObject {
 		}
 	}
 
-	class func pingOnce(host:String, configuration:PingConfiguration, queue:DispatchQueue, completion:(response:PingResponse) -> Void) -> Void{
+	public class func pingOnce(host:String, configuration:PingConfiguration, queue:DispatchQueue, completion:(response:PingResponse) -> Void) -> Void{
 
 		let date = Date()
 
@@ -134,8 +113,30 @@ public class SwiftPing: NSObject {
 					completion(response: response);
 				}
 				ping.start()
-
+				
 			}
+		}
+	}
+
+	// MARK: PRIVATE
+	func socketCallback(socket: CFSocket!, type:CFSocketCallBackType, address:CFData!, data:UnsafePointer<Void>, info:UnsafeMutablePointer<Void>) {
+		// Conditional cast from 'SwiftPing' to 'SwiftPing' always succeeds
+
+		// 1
+		var info:UnsafeMutablePointer<Void> = info
+		guard let ping:SwiftPing = (withUnsafePointer(&info) { (temp) in
+			return unsafeBitCast(temp, to: SwiftPing.self)
+			})else{
+				print("ping callback object is nil")
+				return
+		}
+
+		if (type as CFSocketCallBackType) == CFSocketCallBackType.dataCallBack {
+
+			let fData = UnsafePointer<UInt8>(data)
+			let bytes = UnsafeBufferPointer<UInt8>(start: fData, count: sizeof(UInt8))
+			let cfdata:Data = Data(buffer: bytes)
+			ping.socket(socket: socket, didReadData: cfdata)
 		}
 	}
 
