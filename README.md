@@ -5,6 +5,7 @@
 [![Carthage Compatible](https://img.shields.io/badge/Carthage-compatible-4BC51D.svg?style=flat)](https://github.com/Carthage/Carthage)
 [![License](https://img.shields.io/cocoapods/l/SwiftPing.svg?style=flat)](http://cocoadocs.org/docsets/SwiftPing)
 [![Platform](https://img.shields.io/cocoapods/p/SwiftPing.svg?style=flat)](http://cocoadocs.org/docsets/SwiftPing)
+[![Coverage Status](https://coveralls.io/repos/realm/SwiftCov/badge.svg)](https://codecov.io/github/ankitthakur/SwiftPing)
 
 ## Description
 
@@ -61,11 +62,10 @@ Ankit Thakur, ankitthakur85@icloud.com
 We would love you to contribute to **SwiftPing** and request you follow these guidelines.
 
  - [Raising issues](#raising-issues)
- - [Contributor License Agreement](#contributor-license-agreement)
  - [Coding Standards](#coding-standards)
 
 
-* Raising issues
+### Raising issues
 
 Please raise any bug reports on the issue tracker. Be sure to
 search the list to see if your issue has already been raised.
@@ -75,7 +75,7 @@ trying to do and what went wrong. Provide as much context as possible so we can 
 
 If you find a bug, please submit a pull request with a failing test case displaying the bug or create an issue. Please add tests alongside your pull requests.
 
-* Coding standards
+### Coding standards
 
 Please ensure you follow the coding standards used throughout the existing
 code base. Some basic rules include:
