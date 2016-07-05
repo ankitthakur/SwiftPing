@@ -58,7 +58,28 @@ Ankit Thakur, ankitthakur85@icloud.com
 
 ## Contributing
 
-We would love you to contribute to **SwiftPing**, check the [CONTRIBUTING](https://github.com/ankitthakur85/SwiftPing/blob/master/CONTRIBUTING.md) file for more info.
+We would love you to contribute to **SwiftPing** and request you follow these guidelines.
+
+ - [Raising issues](#raising-issues)
+ - [Contributor License Agreement](#contributor-license-agreement)
+ - [Coding Standards](#coding-standards)
+
+
+* Raising issues
+
+Please raise any bug reports on the issue tracker. Be sure to
+search the list to see if your issue has already been raised.
+
+A good bug report is one that make it easy for us to understand what you were
+trying to do and what went wrong. Provide as much context as possible so we can try to recreate the issue.
+
+If you find a bug, please submit a pull request with a failing test case displaying the bug or create an issue. Please add tests alongside your pull requests.
+
+* Coding standards
+
+Please ensure you follow the coding standards used throughout the existing
+code base. Some basic rules include:
+ - all PRs must have passing builds for all operating systems.
 
 ## License
 
