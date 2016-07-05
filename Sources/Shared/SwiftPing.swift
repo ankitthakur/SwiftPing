@@ -11,14 +11,14 @@ import Darwin
 
 func getIPv4AddressFromHost(host:String, error:AutoreleasingUnsafeMutablePointer<NSError?>) -> Data?{
 
-	var streamError:CFStreamError?
+	var streamError:CFStreamError? = CFStreamError()
 	let cfhost:CFHost = CFHostCreateWithName(nil, host as CFString).takeUnretainedValue()
 	let success = CFHostStartInfoResolution(cfhost, .addresses, &streamError!)
 
 	if success == false {
 
 		if Int32(streamError!.domain)  == kCFStreamErrorDomainNetDB {
-			error.pointee = NSError(domain: kCFErrorDomainCFNetwork as String, code: Int(CFNetworkErrors.cfHostErrorUnknown.rawValue) , userInfo: [kCFGetAddrInfoFailureKey as NSObject : streamError!.error as! AnyObject])
+			error.pointee = NSError(domain: kCFErrorDomainCFNetwork as String, code: Int(CFNetworkErrors.cfHostErrorUnknown.rawValue) , userInfo: [kCFGetAddrInfoFailureKey as NSObject : "error in host name or address lookup"])
 		}
 		else{
 			error.pointee = NSError(domain: kCFErrorDomainCFNetwork as String, code: Int(CFNetworkErrors.cfHostErrorUnknown.rawValue) , userInfo: nil)
@@ -27,11 +27,14 @@ func getIPv4AddressFromHost(host:String, error:AutoreleasingUnsafeMutablePointer
 	else{
 
 		var resolved:DarwinBoolean = DarwinBoolean(false)
-		guard let addresses:NSArray? = CFHostGetAddressing(cfhost, &resolved)?.takeUnretainedValue() as? NSArray else{
+		guard let addresses:NSArray = CFHostGetAddressing(cfhost, &resolved)?.takeUnretainedValue() as? NSArray else{
+			error.pointee = NSError(domain: kCFErrorDomainCFNetwork as String, code: Int(CFNetworkErrors.cfHostErrorHostNotFound.rawValue) , userInfo: [NSLocalizedDescriptionKey:"failed to retrieve the known addresses from the given host"])
 			return nil
 		}
 
-		for address in addresses! {
+		print(addresses)
+
+		for address in addresses {
 			let addressData = address as! NSData
 			let addrin = UnsafePointer<sockaddr>(addressData.bytes).pointee
 
@@ -76,12 +79,9 @@ public class SwiftPing: NSObject {
 	public class func ping(host:String, configuration:PingConfiguration, queue:DispatchQueue, completion:(ping:SwiftPing?, error:NSError?) -> Void) -> Void{
 
 		print(queue)
-		DispatchQueue.global(attributes: .qosDefault).async {
+		queue.async {
 			var error:NSError?;
-			let ipv4Address:Data? = getIPv4AddressFromHost(host:host, error: &error);
-
-
-			queue.async(execute: {
+			let ipv4Address:Data? = getIPv4AddressFromHost(host:host, error: &error)
 
 				if (error != nil) {
 					completion(ping: nil, error: error)
@@ -89,7 +89,7 @@ public class SwiftPing: NSObject {
 				else{
 					completion(ping: SwiftPing(host: host, ipv4Address: ipv4Address!, configuration: configuration, queue: queue), error: nil)
 				}
-			})
+
 		}
 	}
 
