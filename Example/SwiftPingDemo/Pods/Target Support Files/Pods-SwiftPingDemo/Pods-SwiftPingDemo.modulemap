@@ -1,0 +1,6 @@
+framework module Pods_SwiftPingDemo {
+  umbrella header "Pods-SwiftPingDemo-umbrella.h"
+
+  export *
+  module * { export * }
+}

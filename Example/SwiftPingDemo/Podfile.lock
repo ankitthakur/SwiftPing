@@ -1,0 +1,14 @@
+PODS:
+  - SwiftPing (0.1.0)
+
+DEPENDENCIES:
+  - SwiftPing (from `../../`)
+
+EXTERNAL SOURCES:
+  SwiftPing:
+    :path: ../../
+
+SPEC CHECKSUMS:
+  SwiftPing: 7056a6057d060d2961ca5386dd4930578b7960bd
+
+COCOAPODS: 0.39.0
