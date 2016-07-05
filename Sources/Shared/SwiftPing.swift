@@ -75,6 +75,7 @@ public class SwiftPing: NSObject {
 	// MARK: Public APIs
 	public class func ping(host:String, configuration:PingConfiguration, queue:DispatchQueue, completion:(ping:SwiftPing?, error:NSError?) -> Void) -> Void{
 
+		print(queue)
 		DispatchQueue.global(attributes: .qosDefault).async {
 			var error:NSError?;
 			let ipv4Address:Data? = getIPv4AddressFromHost(host:host, error: &error);

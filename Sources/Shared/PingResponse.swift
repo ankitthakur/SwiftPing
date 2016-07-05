@@ -16,7 +16,7 @@ public class PingResponse: NSObject {
 	var duration:TimeInterval
 	var error:NSError?
 
-	init(id:UInt32, ipAddress addr:String?, sequenceNumber number:Int64, duration dur:TimeInterval, error err:NSError?) {
+	public init(id:UInt32, ipAddress addr:String?, sequenceNumber number:Int64, duration dur:TimeInterval, error err:NSError?) {
 		identifier = id
 		ipAddress = addr
 		sequenceNumber = number

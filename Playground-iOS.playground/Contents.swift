@@ -10,8 +10,10 @@ let pingInterval:TimeInterval = 3
 let timeoutInterval:TimeInterval = 4
 let configuration = PingConfiguration(pInterval:pingInterval, withTimeout:  timeoutInterval)
 
+print(configuration)
+
 SwiftPing.ping(host: "google.com", configuration: configuration, queue: DispatchQueue.main) { (ping, error) in
 	print("\(ping)")
-	print("\(ping)")
+	print("\(error)")
 }
 
