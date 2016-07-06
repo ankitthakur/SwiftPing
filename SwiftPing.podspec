@@ -2,11 +2,11 @@ Pod::Spec.new do |s|
   s.name             = "SwiftPing"
   s.summary          = "A short description of SwiftPing."
   s.version          = "0.1.0"
-  s.homepage         = "https://github.com/ankitthakur85/SwiftPing"
+  s.homepage         = "https://github.com/ankitthakur/SwiftPing"
   s.license          = 'MIT'
   s.author           = { "Ankit Thakur" => "ankitthakur85@icloud.com" }
   s.source           = {
-    :git => "https://github.com/ankitthakur85/SwiftPing.git",
+    :git => "https://github.com/ankitthakur/SwiftPing.git",
     :tag => s.version.to_s
   }
   s.social_media_url = 'https://twitter.com/ankitthakur85'
