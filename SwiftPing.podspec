@@ -9,7 +9,7 @@ Pod::Spec.new do |s|
     :git => "https://github.com/ankitthakur/SwiftPing.git",
     :tag => s.version.to_s
   }
-  s.social_media_url = 'https://twitter.com/ankitthakur85'
+  s.social_media_url = 'https://twitter.com/ankitthakur'
 
   s.ios.deployment_target = '8.0'
   s.osx.deployment_target = '10.9'
