@@ -11,13 +11,15 @@ import Darwin
 
 func getIPv4AddressFromHost(host:String, error:AutoreleasingUnsafeMutablePointer<NSError?>) -> Data?{
 
-	var streamError:CFStreamError? = CFStreamError()
-	let cfhost:CFHost = CFHostCreateWithName(nil, host as CFString).takeUnretainedValue()
-	let success = CFHostStartInfoResolution(cfhost, .addresses, &streamError!)
+	var streamError:CFStreamError = CFStreamError()
+	let cfhost = CFHostCreateWithName(nil, host).takeRetainedValue()
+	let status = CFHostStartInfoResolution(cfhost, .addresses, &streamError)
 
-	if success == false {
+	var data:Data?
 
-		if Int32(streamError!.domain)  == kCFStreamErrorDomainNetDB {
+	if status == false {
+
+		if Int32(streamError.domain)  == kCFStreamErrorDomainNetDB {
 			error.pointee = NSError(domain: kCFErrorDomainCFNetwork as String, code: Int(CFNetworkErrors.cfHostErrorUnknown.rawValue) , userInfo: [kCFGetAddrInfoFailureKey as NSObject : "error in host name or address lookup"])
 		}
 		else{
@@ -25,28 +27,29 @@ func getIPv4AddressFromHost(host:String, error:AutoreleasingUnsafeMutablePointer
 		}
 	}
 	else{
-
-		var resolved:DarwinBoolean = DarwinBoolean(false)
-		guard let addresses:NSArray = CFHostGetAddressing(cfhost, &resolved)?.takeUnretainedValue() as? NSArray else{
+		var success: DarwinBoolean = false
+		guard let addresses = CFHostGetAddressing(cfhost, &success)?.takeUnretainedValue() as NSArray? else
+		{
 			error.pointee = NSError(domain: kCFErrorDomainCFNetwork as String, code: Int(CFNetworkErrors.cfHostErrorHostNotFound.rawValue) , userInfo: [NSLocalizedDescriptionKey:"failed to retrieve the known addresses from the given host"])
 			return nil
 		}
 
-		print(addresses)
-
 		for address in addresses {
+
 			let addressData = address as! NSData
 			let addrin = UnsafePointer<sockaddr>(addressData.bytes).pointee
-
-			if addressData.length > sizeof(sockaddr) && addrin.sa_family == UInt8(AF_INET) {
-				return addressData as Data
+			if addressData.length >= sizeof(sockaddr) && addrin.sa_family == UInt8(AF_INET) {
+				data = addressData as Data
+				break
 			}
 		}
 
-		error.pointee = NSError(domain: kCFErrorDomainCFNetwork as String, code: Int(CFNetworkErrors.cfHostErrorHostNotFound.rawValue) , userInfo: nil)
+		if data?.count == 0 || data == nil {
+			error.pointee = NSError(domain: kCFErrorDomainCFNetwork as String, code: Int(CFNetworkErrors.cfHostErrorHostNotFound.rawValue) , userInfo: nil)
+		}
 	}
 
-	return nil
+	return data
 
 }
 
@@ -79,16 +82,18 @@ public class SwiftPing: NSObject {
 	public class func ping(host:String, configuration:PingConfiguration, queue:DispatchQueue, completion:(ping:SwiftPing?, error:NSError?) -> Void) -> Void{
 
 		print(queue)
-		queue.async {
+		DispatchQueue.global().async{
 			var error:NSError?;
 			let ipv4Address:Data? = getIPv4AddressFromHost(host:host, error: &error)
 
+			queue.async {
 				if (error != nil) {
 					completion(ping: nil, error: error)
 				}
 				else{
 					completion(ping: SwiftPing(host: host, ipv4Address: ipv4Address!, configuration: configuration, queue: queue), error: nil)
 				}
+			}
 
 		}
 	}
@@ -114,7 +119,7 @@ public class SwiftPing: NSObject {
 					completion(response: response);
 				}
 				ping.start()
-				
+
 			}
 		}
 	}
@@ -153,18 +158,33 @@ public class SwiftPing: NSObject {
 		let socketAddress:sockaddr_in = UnsafePointer<sockaddr_in>((ipv4Address as NSData).bytes).pointee
 		self.ip = String(cString: inet_ntoa(socketAddress.sin_addr), encoding: String.Encoding.ascii)!
 
-		var context:CFSocketContext  = CFSocketContext();
 
-		// 1
-		var s = self
-		context.info = withUnsafePointer(&s) { (temp) in
-			return unsafeBitCast(temp, to: UnsafeMutablePointer<Void>.self)
-		}
+		var context = CFSocketContext()
+		context.version = 0
+		context.info = unsafeBitCast(self, to: UnsafeMutablePointer<Void>.self);
 
-		//		// 2
-		//		context.info = unsafeBitCast(self, to: UnsafeMutablePointer<Void>.self);
 
-		self.socket = CFSocketCreate(kCFAllocatorDefault, AF_INET, SOCK_DGRAM, IPPROTO_ICMP, CFSocketCallBackType.acceptCallBack.rawValue, socketCallback as! CFSocketCallBack, &context)
+		self.socket = CFSocketCreate(kCFAllocatorDefault, AF_INET, SOCK_DGRAM, IPPROTO_ICMP, CFSocketCallBackType.dataCallBack.rawValue,  {
+			(socket, type, address, data, info )  in
+
+			var info:UnsafeMutablePointer<Void> = info!
+			guard let ping:SwiftPing = (withUnsafePointer(&info) { (temp) in
+				return unsafeBitCast(temp, to: SwiftPing.self)
+				})else{
+					print("ping callback object is nil")
+					return
+			}
+
+			if (type as CFSocketCallBackType) == CFSocketCallBackType.dataCallBack {
+
+				let fData = UnsafePointer<UInt8>(data)
+				let bytes = UnsafeBufferPointer<UInt8>(start: fData, count: sizeof(UInt8))
+				let cfdata:Data = Data(buffer: bytes)
+				ping.socket(socket: socket!, didReadData: cfdata)
+			}
+
+			}, &context )
+
 
 		self.socketSource = CFSocketCreateRunLoopSource(nil, self.socket, 0)
 		CFRunLoopAddSource(CFRunLoopGetMain(), self.socketSource, CFRunLoopMode.commonModes)
