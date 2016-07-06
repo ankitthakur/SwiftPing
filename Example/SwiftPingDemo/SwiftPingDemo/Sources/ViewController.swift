@@ -14,7 +14,7 @@ class ViewController: UIViewController {
 		let config:PingConfiguration = PingConfiguration(interval: 1)
 
 		SwiftPing.ping(host: "google.com",
-		               configuration: config, queue: DispatchQueue.main) { (ping, error) in
+		               configuration: config, queue: DispatchQueue.global()) { (ping, error) in
 										print(ping)
 										print(error)
 		}
