@@ -79,6 +79,14 @@ public class SwiftPing: NSObject {
 	private var currentQueue:DispatchQueue?
 
 	// MARK: Public APIs
+
+	/// pinging to the host url, with provided configuration.
+	///
+	/// - parameters:
+	///   - host: url string, to ping.
+	///   - configuration: PingConfiguration object so as to define ping interval, time interval
+	///   - completion: Closure of the format `(ping:SwiftPing?, error:NSError?) -> Void` format
+
 	public class func ping(host:String, configuration:PingConfiguration, queue:DispatchQueue, completion:(ping:SwiftPing?, error:NSError?) -> Void) -> Void{
 
 		print(queue)
@@ -97,6 +105,13 @@ public class SwiftPing: NSObject {
 
 		}
 	}
+
+	/// pinging to the host url only once, with provided configuration 
+	///
+	/// - parameters:
+	///   - host: url string, to ping.
+	///   - configuration: PingConfiguration object so as to define ping interval, time interval
+	///   - completion: Closure of the format `(ping:SwiftPing?, error:NSError?) -> Void` format
 
 	public class func pingOnce(host:String, configuration:PingConfiguration, queue:DispatchQueue, completion:(response:PingResponse) -> Void) -> Void{
 
@@ -265,7 +280,7 @@ public class SwiftPing: NSObject {
 	}
 
 
-	public func socket(socket:CFSocket, didReadData data:Data?){
+	func socket(socket:CFSocket, didReadData data:Data?){
 
 		var ipHeaderData:NSData?
 		var ipData:NSData?
