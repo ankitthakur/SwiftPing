@@ -21,8 +21,8 @@ let configuration = PingConfiguration(pInterval:pingInterval, withTimeout:  time
 print(configuration)
 
 SwiftPing.ping(host: "google.com", configuration: configuration, queue: DispatchQueue.main) { (ping, error) in
-print("\(ping)")
-print("\(error)")
+  print("\(ping)")
+  print("\(error)")
 }
 ```
 
@@ -50,7 +50,7 @@ github "ankitthakur85/SwiftPing"
 
 ## Todo
 
-Test cases and usage needs to be added
+Test cases needs to be added
 
 
 ## Author
