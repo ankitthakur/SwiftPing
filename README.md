@@ -24,6 +24,25 @@ SwiftPing.ping(host: "google.com", configuration: configuration, queue: Dispatch
   print("\(ping)")
   print("\(error)")
 }
+
+SwiftPing.pingOnce(host: "google.com", configuration: configuration, queue: DispatchQueue.global()) { (response: PingResponse) in
+    print("\(response.duration)")
+    print("\(response.ipAddress)")
+    print("\(response.error)")
+}
+
+class PingResponse : NSObject {
+
+    public var identifier: UInt32
+
+    public var ipAddress: String?
+
+    public var sequenceNumber: Int64
+
+    public var duration: TimeInterval
+
+    public var error: NSError?
+}
 ```
 
 ## Installation

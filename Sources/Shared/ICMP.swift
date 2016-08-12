@@ -52,7 +52,7 @@ enum ICMPType:UInt8{
 	while bufLen > 1 {
 		checksum += UInt32(buf.pointee)
 		buf = buf.successor()
-		bufLen -= sizeof(UInt16)
+		bufLen -= sizeof(UInt16.self)
 	}
 
 	if bufLen == 1 {
@@ -72,8 +72,8 @@ enum ICMPType:UInt8{
 	memset(&tempBuffer, 7, Int(payloadSize))
 
 	// Construct the ping packet.
-	let payload:NSData = NSData(bytes: tempBuffer, length: Int(payloadSize))
-	let package:NSMutableData = NSMutableData(capacity: sizeof(ICMPHeader)+payload.length)!
+	let payload:NSData = NSData(bytes: tempBuffer!, length: Int(payloadSize))
+	let package:NSMutableData = NSMutableData(capacity: sizeof(ICMPHeader.self)+payload.length)!
 
 
 	var mutableBytes = package.mutableBytes;
@@ -106,7 +106,7 @@ enum ICMPType:UInt8{
 
 	let buffer:NSMutableData = data.mutableCopy() as! NSMutableData
 
-	if buffer.length < (sizeof(IPHeader)+sizeof(ICMPHeader)) {
+	if buffer.length < (sizeof(IPHeader.self)+sizeof(ICMPHeader.self)) {
 		return false
 	}
 
@@ -121,17 +121,17 @@ enum ICMPType:UInt8{
 	assert((ipHeader.versionAndHeaderLength & 0xF0) == 0x40)     // IPv4
 	assert(ipHeader.protocol == 1)                               // ICMP
 
-	let ipHeaderLength:UInt8 = (ipHeader.versionAndHeaderLength & 0x0F) * UInt8(sizeof(UInt32))
+	let ipHeaderLength:UInt8 = (ipHeader.versionAndHeaderLength & 0x0F) * UInt8(sizeof(UInt32.self))
 
-	let range:NSRange = NSMakeRange(0, sizeof(IPHeader))
+	let range:NSRange = NSMakeRange(0, sizeof(IPHeader.self))
 	ipHeaderData.pointee = buffer.subdata(with: range)
 
 
-	if (buffer.length >= sizeof(IPHeader) + Int(ipHeaderLength)) {
-		ipData.pointee = buffer.subdata(with:NSMakeRange(sizeof(IPHeader), Int(ipHeaderLength)))
+	if (buffer.length >= sizeof(IPHeader.self) + Int(ipHeaderLength)) {
+		ipData.pointee = buffer.subdata(with:NSMakeRange(sizeof(IPHeader.self), Int(ipHeaderLength)))
 	}
 
-	if (buffer.length < Int(ipHeaderLength) + sizeof(ICMPHeader)) {
+	if (buffer.length < Int(ipHeaderLength) + sizeof(ICMPHeader.self)) {
 		return false
 	}
 
@@ -158,8 +158,8 @@ enum ICMPType:UInt8{
 	}
 
 
-	let icmpDataRange = NSMakeRange(icmpHeaderOffset + sizeof(ICMPHeader), buffer.length - (icmpHeaderOffset + sizeof(ICMPHeader)))
-	icmpHeaderData.pointee = buffer.subdata(with: NSMakeRange(icmpHeaderOffset, sizeof(ICMPHeader)))
+	let icmpDataRange = NSMakeRange(icmpHeaderOffset + sizeof(ICMPHeader.self), buffer.length - (icmpHeaderOffset + sizeof(ICMPHeader.self)))
+	icmpHeaderData.pointee = buffer.subdata(with: NSMakeRange(icmpHeaderOffset, sizeof(ICMPHeader.self)))
 	icmpData.pointee = buffer.subdata(with:icmpDataRange)
 
 	return true

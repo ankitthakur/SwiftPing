@@ -5,7 +5,7 @@ class ViewController: UIViewController {
 
   override func viewDidLoad() {
     super.viewDidLoad()
-    view.backgroundColor = UIColor.red()
+    view.backgroundColor = UIColor.red
 		verifyPing()
   }
 
@@ -18,6 +18,13 @@ class ViewController: UIViewController {
 										print(ping)
 										print(error)
 		}
+        
+        SwiftPing.pingOnce(host: "google.com",
+                           configuration: config,
+                           queue: DispatchQueue.main){ (response: PingResponse) in
+        }
+        
+        
 	}
 
 }

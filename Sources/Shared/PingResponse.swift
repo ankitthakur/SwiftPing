@@ -10,11 +10,11 @@ import Foundation
 
 public class PingResponse: NSObject {
 
-	var identifier:UInt32
-	var ipAddress:String?
-	var sequenceNumber:Int64
-	var duration:TimeInterval
-	var error:NSError?
+	public var identifier:UInt32
+	public var ipAddress:String?
+	public var sequenceNumber:Int64
+	public var duration:TimeInterval
+	public var error:NSError?
 
 	public init(id:UInt32, ipAddress addr:String?, sequenceNumber number:Int64, duration dur:TimeInterval, error err:NSError?) {
 		identifier = id

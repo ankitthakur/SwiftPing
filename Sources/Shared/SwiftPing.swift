@@ -38,7 +38,7 @@ func getIPv4AddressFromHost(host:String, error:AutoreleasingUnsafeMutablePointer
 
 			let addressData = address as! NSData
 			let addrin = UnsafePointer<sockaddr>(addressData.bytes).pointee
-			if addressData.length >= sizeof(sockaddr) && addrin.sa_family == UInt8(AF_INET) {
+			if addressData.length >= sizeof(sockaddr.self) && addrin.sa_family == UInt8(AF_INET) {
 				data = addressData as Data
 				break
 			}
@@ -155,7 +155,7 @@ public class SwiftPing: NSObject {
 		if (type as CFSocketCallBackType) == CFSocketCallBackType.dataCallBack {
 
 			let fData = UnsafePointer<UInt8>(data)
-			let bytes = UnsafeBufferPointer<UInt8>(start: fData, count: sizeof(UInt8))
+			let bytes = UnsafeBufferPointer<UInt8>(start: fData, count: sizeof(UInt8.self))
 			let cfdata:Data = Data(buffer: bytes)
 			ping.socket(socket: socket, didReadData: cfdata)
 		}
@@ -193,7 +193,7 @@ public class SwiftPing: NSObject {
 			if (type as CFSocketCallBackType) == CFSocketCallBackType.dataCallBack {
 
 				let fData = UnsafePointer<UInt8>(data)
-				let bytes = UnsafeBufferPointer<UInt8>(start: fData, count: sizeof(UInt8))
+				let bytes = UnsafeBufferPointer<UInt8>(start: fData, count: sizeof(UInt8.self))
 				let cfdata:Data = Data(buffer: bytes)
 				ping.socket(socket: socket!, didReadData: cfdata)
 			}
@@ -216,13 +216,13 @@ public class SwiftPing: NSObject {
 	convenience init(ipv4Address:String, config configuration:PingConfiguration, queue:DispatchQueue) {
 
 		var socketAddress:sockaddr_in?
-		memset(&socketAddress, 0, sizeof(sockaddr_in))
+		memset(&socketAddress, 0, sizeof(sockaddr_in.self))
 
-		socketAddress!.sin_len = UInt8(sizeof(sockaddr_in))
+		socketAddress!.sin_len = UInt8(sizeof(sockaddr_in.self))
 		socketAddress!.sin_family = UInt8(AF_INET)
 		socketAddress!.sin_port = 0
 		socketAddress!.sin_addr.s_addr = inet_addr(ipv4Address.cString(using: String.Encoding.utf8))
-		let data = NSData(bytes: &socketAddress, length: sizeof(sockaddr_in))
+		let data = NSData(bytes: &socketAddress, length: sizeof(sockaddr_in.self))
 
 		// calling designated initializer
 		self.init(host: ipv4Address, ipv4Address: data as Data, configuration: configuration, queue: queue)
@@ -272,10 +272,9 @@ public class SwiftPing: NSObject {
 
 		let dispatchTime: DispatchTime = DispatchTime.now() + Double(Int64((self.configuration?.pingInterval)! * Double(NSEC_PER_SEC)))
 
-
-		self.currentQueue!.after(when: dispatchTime) {
+        
+		self.currentQueue?.asyncAfter(deadline: dispatchTime) {
 			self.hasScheduledNextPing = false
-			//			self.sendPing()
 		}
 	}
 
@@ -376,7 +375,7 @@ public class SwiftPing: NSObject {
   let block = self.timeoutBlock as! Block
 		let dispatchTime: DispatchTime = DispatchTime.now() + Double(Int64((self.configuration?.pingInterval)! * Double(NSEC_PER_SEC)))
 		
-		self.currentQueue?.after(when: dispatchTime, execute: block)
+		self.currentQueue?.asyncAfter(deadline: dispatchTime, execute: block)
 		
 		
 	}
