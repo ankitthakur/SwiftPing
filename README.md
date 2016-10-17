@@ -64,7 +64,7 @@ pod 'SwiftPing'
 To install just write into your Cartfile:
 
 ```ruby
-github "ankitthakur85/SwiftPing"
+github "ankitthakur/SwiftPing"
 ```
 
 ## Todo
