@@ -12,7 +12,7 @@ import Darwin
 func getIPv4AddressFromHost(host:String, error:AutoreleasingUnsafeMutablePointer<NSError?>) -> Data?{
 
 	var streamError:CFStreamError = CFStreamError()
-	let cfhost = CFHostCreateWithName(nil, host).takeRetainedValue()
+	let cfhost = CFHostCreateWithName(nil, host as CFString).takeRetainedValue()
 	let status = CFHostStartInfoResolution(cfhost, .addresses, &streamError)
 
 	var data:Data?
@@ -37,8 +37,8 @@ func getIPv4AddressFromHost(host:String, error:AutoreleasingUnsafeMutablePointer
 		for address in addresses {
 
 			let addressData = address as! NSData
-			let addrin = UnsafePointer<sockaddr>(addressData.bytes).pointee
-			if addressData.length >= sizeof(sockaddr.self) && addrin.sa_family == UInt8(AF_INET) {
+			let addrin = addressData.bytes.assumingMemoryBound(to: sockaddr.self).pointee
+			if addressData.length >= MemoryLayout<sockaddr>.size && addrin.sa_family == UInt8(AF_INET) {
 				data = addressData as Data
 				break
 			}
@@ -53,15 +53,17 @@ func getIPv4AddressFromHost(host:String, error:AutoreleasingUnsafeMutablePointer
 
 }
 
+public typealias Observer = (( _ ping:SwiftPing, _ response:PingResponse) -> Void)
+public typealias ErrorClosure = ((_ ping:SwiftPing, _ error:NSError) -> Void)
 public class SwiftPing: NSObject {
 
 	var host:String?
 	var ip:String?
 	var configuration:PingConfiguration?
 
-	var observer:((ping:SwiftPing, response:PingResponse) -> Void)?
+	public var observer:Observer?
 
-	var errorClosure:((ping:SwiftPing, error:NSError) -> Void)?
+	var errorClosure:ErrorClosure?
 
 	var identifier:UInt32?
 
@@ -87,7 +89,7 @@ public class SwiftPing: NSObject {
 	///   - configuration: PingConfiguration object so as to define ping interval, time interval
 	///   - completion: Closure of the format `(ping:SwiftPing?, error:NSError?) -> Void` format
 
-	public class func ping(host:String, configuration:PingConfiguration, queue:DispatchQueue, completion:(ping:SwiftPing?, error:NSError?) -> Void) -> Void{
+	public class func ping(host:String, configuration:PingConfiguration, queue:DispatchQueue, completion:@escaping (_ ping:SwiftPing?, _ error:NSError?) -> Void) -> Void{
 
 		print(queue)
 		DispatchQueue.global().async{
@@ -96,10 +98,10 @@ public class SwiftPing: NSObject {
 
 			queue.async {
 				if (error != nil) {
-					completion(ping: nil, error: error)
+					completion(nil, error)
 				}
 				else{
-					completion(ping: SwiftPing(host: host, ipv4Address: ipv4Address!, configuration: configuration, queue: queue), error: nil)
+					completion(SwiftPing(host: host, ipv4Address: ipv4Address!, configuration: configuration, queue: queue), nil)
 				}
 			}
 
@@ -113,7 +115,7 @@ public class SwiftPing: NSObject {
 	///   - configuration: PingConfiguration object so as to define ping interval, time interval
 	///   - completion: Closure of the format `(ping:SwiftPing?, error:NSError?) -> Void` format
 
-	public class func pingOnce(host:String, configuration:PingConfiguration, queue:DispatchQueue, completion:(response:PingResponse) -> Void) -> Void{
+	public class func pingOnce(host:String, configuration:PingConfiguration, queue:DispatchQueue, completion:@escaping (_ response:PingResponse) -> Void) -> Void{
 
 		let date = Date()
 
@@ -121,7 +123,7 @@ public class SwiftPing: NSObject {
 			if error != nil {
 				let response = PingResponse(id: 0, ipAddress: nil, sequenceNumber: 1, duration: Date().timeIntervalSince(date), error: error)
 
-				completion(response: response);
+				completion(response);
 			}
 			else {
 				let ping:SwiftPing = ping!
@@ -131,7 +133,7 @@ public class SwiftPing: NSObject {
 				ping.observer = {(ping:SwiftPing, response:PingResponse) -> Void in
 					ping.stop()
 					ping.observer = nil
-					completion(response: response);
+					completion(response);
 				}
 				ping.start()
 
@@ -140,12 +142,12 @@ public class SwiftPing: NSObject {
 	}
 
 	// MARK: PRIVATE
-	func socketCallback(socket: CFSocket!, type:CFSocketCallBackType, address:CFData!, data:UnsafePointer<Void>, info:UnsafeMutablePointer<Void>) {
+	func socketCallback(socket: CFSocket!, type:CFSocketCallBackType, address:CFData!, data:UnsafeRawPointer, info:UnsafeMutableRawPointer) {
 		// Conditional cast from 'SwiftPing' to 'SwiftPing' always succeeds
 
 		// 1
-		var info:UnsafeMutablePointer<Void> = info
-		guard let ping:SwiftPing = (withUnsafePointer(&info) { (temp) in
+		var info:UnsafeMutableRawPointer = info
+		guard let ping:SwiftPing = (withUnsafePointer(to: &info) { (temp) in
 			return unsafeBitCast(temp, to: SwiftPing.self)
 			})else{
 				print("ping callback object is nil")
@@ -154,8 +156,8 @@ public class SwiftPing: NSObject {
 
 		if (type as CFSocketCallBackType) == CFSocketCallBackType.dataCallBack {
 
-			let fData = UnsafePointer<UInt8>(data)
-			let bytes = UnsafeBufferPointer<UInt8>(start: fData, count: sizeof(UInt8.self))
+			let fData = data.assumingMemoryBound(to: UInt8.self)
+			let bytes = UnsafeBufferPointer<UInt8>(start: fData, count: MemoryLayout<UInt8>.size)
 			let cfdata:Data = Data(buffer: bytes)
 			ping.socket(socket: socket, didReadData: cfdata)
 		}
@@ -167,33 +169,36 @@ public class SwiftPing: NSObject {
 		self.host = host;
 		self.ipv4address = ipv4Address;
 		self.configuration = configuration;
-		self.identifier = arc4random();
+		self.identifier = UInt32(arc4random_uniform(UInt32(UInt16.max)));
 		self.currentQueue = queue
 
-		let socketAddress:sockaddr_in = UnsafePointer<sockaddr_in>((ipv4Address as NSData).bytes).pointee
+		let socketAddress:sockaddr_in = (ipv4Address as NSData).bytes.assumingMemoryBound(to: sockaddr_in.self).pointee
 		self.ip = String(cString: inet_ntoa(socketAddress.sin_addr), encoding: String.Encoding.ascii)!
 
 
 		var context = CFSocketContext()
 		context.version = 0
-		context.info = unsafeBitCast(self, to: UnsafeMutablePointer<Void>.self);
+		context.info = unsafeBitCast(self, to: UnsafeMutableRawPointer.self);
 
 
 		self.socket = CFSocketCreate(kCFAllocatorDefault, AF_INET, SOCK_DGRAM, IPPROTO_ICMP, CFSocketCallBackType.dataCallBack.rawValue,  {
 			(socket, type, address, data, info )  in
 
-			var info:UnsafeMutablePointer<Void> = info!
-			guard let ping:SwiftPing = (withUnsafePointer(&info) { (temp) in
+			var info:UnsafeMutableRawPointer = info!
+			guard let ping:SwiftPing = (withUnsafePointer(to: &info) { (temp) in
 				return unsafeBitCast(temp, to: SwiftPing.self)
 				})else{
 					print("ping callback object is nil")
 					return
 			}
 
+            print("ping - \(ping) ")
 			if (type as CFSocketCallBackType) == CFSocketCallBackType.dataCallBack {
 
-				let fData = UnsafePointer<UInt8>(data)
-				let bytes = UnsafeBufferPointer<UInt8>(start: fData, count: sizeof(UInt8.self))
+                print("CFSocketCallBackType.dataCallBack ")
+                
+				let fData = data?.assumingMemoryBound(to: UInt8.self)
+				let bytes = UnsafeBufferPointer<UInt8>(start: fData, count: MemoryLayout<UInt8>.size)
 				let cfdata:Data = Data(buffer: bytes)
 				ping.socket(socket: socket!, didReadData: cfdata)
 			}
@@ -216,13 +221,13 @@ public class SwiftPing: NSObject {
 	convenience init(ipv4Address:String, config configuration:PingConfiguration, queue:DispatchQueue) {
 
 		var socketAddress:sockaddr_in?
-		memset(&socketAddress, 0, sizeof(sockaddr_in.self))
+		memset(&socketAddress, 0, MemoryLayout<sockaddr_in>.size)
 
-		socketAddress!.sin_len = UInt8(sizeof(sockaddr_in.self))
+		socketAddress!.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
 		socketAddress!.sin_family = UInt8(AF_INET)
 		socketAddress!.sin_port = 0
 		socketAddress!.sin_addr.s_addr = inet_addr(ipv4Address.cString(using: String.Encoding.utf8))
-		let data = NSData(bytes: &socketAddress, length: sizeof(sockaddr_in.self))
+		let data = NSData(bytes: &socketAddress, length: MemoryLayout<sockaddr_in>.size)
 
 		// calling designated initializer
 		self.init(host: ipv4Address, ipv4Address: data as Data, configuration: configuration, queue: queue)
@@ -237,7 +242,7 @@ public class SwiftPing: NSObject {
 
 	// MARK: Start and Stop the pings
 
-	func start(){
+	public func start(){
 
 		if isPinging == false{
 			isPinging = true
@@ -247,7 +252,7 @@ public class SwiftPing: NSObject {
 		}
 	}
 
-	func stop(){
+	public func stop(){
 		isPinging = false
 		currentSequenceNumber = 0
 		currentStartDate = nil
@@ -291,8 +296,8 @@ public class SwiftPing: NSObject {
 				return nil
 			}
 
-			var bytes:UnsafePointer<Void> = (ipHeaderData?.bytes)!
-			guard let ipHeader:IPHeader = (withUnsafePointer(&bytes) { (temp) in
+			var bytes:UnsafeRawPointer = (ipHeaderData?.bytes)!
+			guard let ipHeader:IPHeader = (withUnsafePointer(to: &bytes) { (temp) in
 				return unsafeBitCast(temp, to: IPHeader.self)
 				})else{
 					print("ipheader data is nil")
@@ -300,11 +305,15 @@ public class SwiftPing: NSObject {
 			}
 
 			let sourceAddr:[UInt8] = ipHeader.sourceAddress
+            
+            print("\(sourceAddr[0]).\(sourceAddr[1]).\(sourceAddr[2]).\(sourceAddr[3])")
 
 			return "\(sourceAddr[0]).\(sourceAddr[1]).\(sourceAddr[2]).\(sourceAddr[3])"
 		}
 
-		if !ICMPExtractResponseFromData(data: data!, ipHeaderData: &ipHeaderData, ipData: &ipData, icmpHeaderData: &icmpHeaderData, icmpData: &icmpData) {
+		if !ICMPExtractResponseFromData(data: data! as NSData, ipHeaderData: &ipHeaderData, ipData: &ipData, icmpHeaderData: &icmpHeaderData, icmpData: &icmpData) {
+            
+            print("ICMPExtractResponseFromData")
 			if (ipHeaderData != nil && self.ip == extractIPAddressBlock()) {
 				return
 			}
@@ -313,7 +322,7 @@ public class SwiftPing: NSObject {
 		let error = NSError(domain: NSURLErrorDomain, code: NSURLErrorCannotDecodeRawData, userInfo: nil)
 		let response:PingResponse = PingResponse(id: self.identifier!, ipAddress: nil, sequenceNumber: Int64(currentSequenceNumber), duration: Date().timeIntervalSince(currentStartDate!), error: error)
 		if observer != nil {
-			observer!(ping: self, response: response)
+			observer!(self, response)
 		}
 
 		return scheduleNextPing()
@@ -339,7 +348,7 @@ public class SwiftPing: NSObject {
 			let error = NSError(domain: NSURLErrorDomain, code:NSURLErrorCannotFindHost, userInfo: [:])
 			let response:PingResponse = PingResponse(id: self.identifier!, ipAddress: nil, sequenceNumber: Int64(currentSequenceNumber), duration: Date().timeIntervalSince(currentStartDate!), error: error)
 			if observer != nil {
-				observer!(ping: self, response: response)
+				observer!(self, response)
 			}
 
 			return self.scheduleNextPing()
@@ -349,7 +358,7 @@ public class SwiftPing: NSObject {
 			let error = NSError(domain: NSURLErrorDomain, code:NSURLErrorTimedOut, userInfo: [:])
 			let response:PingResponse = PingResponse(id: self.identifier!, ipAddress: nil, sequenceNumber: Int64(currentSequenceNumber), duration: Date().timeIntervalSince(currentStartDate!), error: error)
 			if observer != nil {
-				observer!(ping: self, response: response)
+				observer!(self, response)
 			}
 
 			return self.scheduleNextPing()
@@ -366,7 +375,7 @@ public class SwiftPing: NSObject {
 			let error = NSError(domain: NSURLErrorDomain, code:NSURLErrorTimedOut, userInfo: [:])
 			let response:PingResponse = PingResponse(id: self.identifier!, ipAddress: nil, sequenceNumber: Int64(self.currentSequenceNumber), duration: Date().timeIntervalSince(self.currentStartDate!), error: error)
 			if self.observer != nil {
-				self.observer!(ping: self, response: response)
+				self.observer!(self, response)
 			}
 			self.scheduleNextPing()
   }

@@ -17,11 +17,25 @@ class ViewController: UIViewController {
 		               configuration: config, queue: DispatchQueue.global()) { (ping, error) in
 										print(ping)
 										print(error)
+                        
+                        // start the ping.
+                        ping?.observer = {(ping:SwiftPing, response:PingResponse) -> Void in
+                            ping.stop()
+                            ping.observer = nil
+                            
+                        }
+                        ping?.start()
 		}
         
-        SwiftPing.pingOnce(host: "google.com",
+        SwiftPing.pingOnce(host: "www.google.com",
                            configuration: config,
                            queue: DispatchQueue.main){ (response: PingResponse) in
+                            
+                            print(response)
+                            print(response.duration)
+                            print(response.ipAddress)
+                            print(response.error)
+                            print(response.identifier)
         }
         
         

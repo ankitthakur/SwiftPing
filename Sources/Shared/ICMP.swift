@@ -43,16 +43,16 @@ enum ICMPType:UInt8{
 
 //static inline uint16_t in_cksum(const void *buffer, size_t bufferLen)
 
-@inline(__always) func checkSum(buffer:UnsafeMutablePointer<Void>, bufLen:Int) -> UInt16 {
+@inline(__always) func checkSum(buffer:UnsafeMutableRawPointer, bufLen:Int) -> UInt16 {
 
 	var bufLen = bufLen
 	var checksum:UInt32 = 0
-	var buf = UnsafeMutablePointer<UInt16>(buffer)
+	var buf = buffer.assumingMemoryBound(to: UInt16.self)
 
 	while bufLen > 1 {
 		checksum += UInt32(buf.pointee)
 		buf = buf.successor()
-		bufLen -= sizeof(UInt16.self)
+		bufLen -= MemoryLayout<UInt16>.size
 	}
 
 	if bufLen == 1 {
@@ -68,20 +68,19 @@ enum ICMPType:UInt8{
 
 @inline(__always) func ICMPPackageCreate(identifier:UInt16, sequenceNumber:UInt16, payloadSize:UInt32)->NSData?
 {
-	var tempBuffer:[CChar]?
-	memset(&tempBuffer, 7, Int(payloadSize))
 
+    var packet:String = "\(arc4random()) bottles of beer on the wall sdnwjdn  dskjwebdkjb wekjdnqkjdb wekjdbqewkjdbkjewvb wekjbdkqjwbdkjqbvkj bkjbdkqjwbdkqjwb webdwbeo23oeh08eobqwkjbkjwd bkj2bqkjfbcwkdvbwekj bwkejbdqjkwdbqkjwbc wekjqbfkjqwbdqkjevb wekjbfkj bwekjqwbdkqjbvkjwdb kwbfqhwebd12douc2wevb qbdkjqwbd"
+//     payload = [[NSString stringWithFormat:@"%28zd bottles of beer on the wall", (ssize_t) 99 - (size_t) (self.nextSequenceNumber % 100) ] dataUsingEncoding:NSASCIIStringEncoding];
+    
 	// Construct the ping packet.
-	let payload:NSData = NSData(bytes: tempBuffer!, length: Int(payloadSize))
-	let package:NSMutableData = NSMutableData(capacity: sizeof(ICMPHeader.self)+payload.length)!
+	var payload:NSData = NSData(data: packet.data(using: String.Encoding.utf8)!)
+    payload = payload.subdata(with: NSMakeRange(0, Int(payloadSize))) as NSData
+	let package:NSMutableData = NSMutableData(capacity: MemoryLayout<ICMPHeader>.size+payload.length)!
 
 
 	var mutableBytes = package.mutableBytes;
-	guard let header:ICMPHeader = (withUnsafePointer(&mutableBytes) { (temp) in
-		return unsafeBitCast(temp, to: ICMPHeader.self)
-		}) else {
-			return nil
-	}
+    
+    let header:ICMPHeader = mutableBytes.assumingMemoryBound(to: ICMPHeader.self).pointee
 
 	var icmpHeader:ICMPHeader = header
 
@@ -106,13 +105,13 @@ enum ICMPType:UInt8{
 
 	let buffer:NSMutableData = data.mutableCopy() as! NSMutableData
 
-	if buffer.length < (sizeof(IPHeader.self)+sizeof(ICMPHeader.self)) {
+	if buffer.length < (MemoryLayout<IPHeader>.size+MemoryLayout<ICMPHeader>.size) {
 		return false
 	}
 
 	var mutableBytes = buffer.mutableBytes;
 
-	guard let ipHeader:IPHeader = (withUnsafePointer(&mutableBytes) { (temp) in
+	guard let ipHeader:IPHeader = (withUnsafePointer(to: &mutableBytes) { (temp) in
 		return unsafeBitCast(temp, to: IPHeader.self)
 		}) else {
 			return false
@@ -121,25 +120,25 @@ enum ICMPType:UInt8{
 	assert((ipHeader.versionAndHeaderLength & 0xF0) == 0x40)     // IPv4
 	assert(ipHeader.protocol == 1)                               // ICMP
 
-	let ipHeaderLength:UInt8 = (ipHeader.versionAndHeaderLength & 0x0F) * UInt8(sizeof(UInt32.self))
+	let ipHeaderLength:UInt8 = (ipHeader.versionAndHeaderLength & 0x0F) * UInt8(MemoryLayout<UInt32>.size)
 
-	let range:NSRange = NSMakeRange(0, sizeof(IPHeader.self))
-	ipHeaderData.pointee = buffer.subdata(with: range)
+	let range:NSRange = NSMakeRange(0, MemoryLayout<IPHeader>.size)
+	ipHeaderData.pointee = buffer.subdata(with: range) as NSData?
 
 
-	if (buffer.length >= sizeof(IPHeader.self) + Int(ipHeaderLength)) {
-		ipData.pointee = buffer.subdata(with:NSMakeRange(sizeof(IPHeader.self), Int(ipHeaderLength)))
+	if (buffer.length >= MemoryLayout<IPHeader>.size + Int(ipHeaderLength)) {
+		ipData.pointee = buffer.subdata(with:NSMakeRange(MemoryLayout<IPHeader>.size, Int(ipHeaderLength))) as NSData?
 	}
 
-	if (buffer.length < Int(ipHeaderLength) + sizeof(ICMPHeader.self)) {
+	if (buffer.length < Int(ipHeaderLength) + MemoryLayout<ICMPHeader>.size) {
 		return false
 	}
 
 	let icmpHeaderOffset:size_t = size_t(ipHeaderLength);
 
-	var headerBuffer = (UnsafeMutablePointer<UInt8>(mutableBytes) + icmpHeaderOffset)
+	var headerBuffer = mutableBytes.assumingMemoryBound(to: UInt8.self) + icmpHeaderOffset
 
-	guard let icmpheader: ICMPHeader = (withUnsafePointer(&headerBuffer) { (temp) in
+	guard let icmpheader: ICMPHeader = (withUnsafePointer(to: &headerBuffer) { (temp) in
 		return unsafeBitCast(temp, to: ICMPHeader.self)
 		}) else {
 			return false
@@ -158,9 +157,9 @@ enum ICMPType:UInt8{
 	}
 
 
-	let icmpDataRange = NSMakeRange(icmpHeaderOffset + sizeof(ICMPHeader.self), buffer.length - (icmpHeaderOffset + sizeof(ICMPHeader.self)))
-	icmpHeaderData.pointee = buffer.subdata(with: NSMakeRange(icmpHeaderOffset, sizeof(ICMPHeader.self)))
-	icmpData.pointee = buffer.subdata(with:icmpDataRange)
+	let icmpDataRange = NSMakeRange(icmpHeaderOffset + MemoryLayout<ICMPHeader>.size, buffer.length - (icmpHeaderOffset + MemoryLayout<ICMPHeader>.size))
+	icmpHeaderData.pointee = buffer.subdata(with: NSMakeRange(icmpHeaderOffset, MemoryLayout<ICMPHeader>.size)) as NSData?
+	icmpData.pointee = buffer.subdata(with:icmpDataRange) as NSData?
 
 	return true
 }
