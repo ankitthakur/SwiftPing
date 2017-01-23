@@ -70,7 +70,6 @@ enum ICMPType:UInt8{
 {
 
     var packet:String = "\(arc4random()) bottles of beer on the wall sdnwjdn  dskjwebdkjb wekjdnqkjdb wekjdbqewkjdbkjewvb wekjbdkqjwbdkjqbvkj bkjbdkqjwbdkqjwb webdwbeo23oeh08eobqwkjbkjwd bkj2bqkjfbcwkdvbwekj bwkejbdqjkwdbqkjwbc wekjqbfkjqwbdqkjevb wekjbfkj bwekjqwbdkqjbvkjwdb kwbfqhwebd12douc2wevb qbdkjqwbd"
-//     payload = [[NSString stringWithFormat:@"%28zd bottles of beer on the wall", (ssize_t) 99 - (size_t) (self.nextSequenceNumber % 100) ] dataUsingEncoding:NSASCIIStringEncoding];
     
 	// Construct the ping packet.
 	var payload:NSData = NSData(data: packet.data(using: String.Encoding.utf8)!)
@@ -98,6 +97,15 @@ enum ICMPType:UInt8{
 	let bytes = package.mutableBytes
 
 	icmpHeader.checkSum = checkSum(buffer: bytes, bufLen: package.length)
+    
+    var byteBuffer = [UInt8]()
+    withUnsafeBytes(of: &icmpHeader) {
+        (bytes: UnsafeRawBufferPointer) in byteBuffer += bytes
+    }
+    package.replaceBytes(in: NSMakeRange(0, byteBuffer.count), withBytes: byteBuffer)
+    package.replaceBytes(in: NSMakeRange(byteBuffer.count, payload.length), withBytes: payload.bytes)
+    print("ping package: \(package)")
+    
 	return package;
 }
 

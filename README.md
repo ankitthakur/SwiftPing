@@ -21,16 +21,9 @@ let configuration = PingConfiguration(pInterval:pingInterval, withTimeout:  time
 print(configuration)
 
 SwiftPing.ping(host: "google.com", configuration: configuration, queue: DispatchQueue.main) { (ping, error) in
-    print("\(ping)")
-    print("\(error)")
-    // start the ping.
-    ping?.observer = {(ping:SwiftPing, response:PingResponse) -> Void in
-        ping.stop()
-        ping.observer = nil
-    }
-    ping?.start()
+  print("\(ping)")
+  print("\(error)")
 }
-
 
 SwiftPing.pingOnce(host: "google.com", configuration: configuration, queue: DispatchQueue.global()) { (response: PingResponse) in
     print("\(response.duration)")
